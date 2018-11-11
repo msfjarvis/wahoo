@@ -112,3 +112,9 @@ all.config
 
 # Kdevelop4
 *.kdev4
+
+# Caesium build system edits
+out/
+zips/
+build.sh
+*.txt
