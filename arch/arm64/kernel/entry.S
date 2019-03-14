@@ -131,7 +131,7 @@ alternative_else_nop_endif
 	.else
 	add	x21, sp, #S_FRAME_SIZE
 	get_thread_info tsk
-	/* Save the task's original addr_limit and set USER_DS (TASK_SIZE_64) */
+	/* Save the task's original addr_limit and set USER_DS */
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	ldr	x20, [tsk, #TSK_TI_ADDR_LIMIT]
 #else
