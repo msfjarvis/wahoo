@@ -4,6 +4,7 @@
 #include <linux/vmalloc.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/cpu.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/mm_event.h>
