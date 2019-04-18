@@ -327,8 +327,6 @@ struct fts_ts_info {
 	bool enabled;
 #if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
-	struct work_struct resume_work;
-	struct work_struct suspend_work;
 #endif
 #ifdef FEATURE_FTS_PRODUCTION_CODE
 	struct device *pdc_dev_ts;
