@@ -1425,11 +1425,10 @@ static const struct attribute_group attr_group = {
 	.attrs = htc_attrs,
 };
 
-#ifdef CONFIG_WAKE_GESTURES
-struct kobject *android_touch_kobj;
-#else
-static struct kobject *android_touch_kobj;
+#ifndef CONFIG_WAKE_GESTURES
+static
 #endif
+struct kobject *android_touch_kobj;
 static int synaptics_rmi4_sysfs_init(struct synaptics_rmi4_data *rmi4_data, bool enable)
 {
 	if (enable) {
@@ -6295,16 +6294,11 @@ static int synaptics_rmi4_resume(struct device *dev)
 	if (rmi4_data->stay_awake)
 		return 0;
 
-#ifdef CONFIG_WAKE_GESTURES
-	if (!wg_switch) {
-#endif
+	if (!wg_switch && IS_ENABLED(CONFIG_WAKE_GESTURES)) {
 	gpio_set_value(rmi4_data->hw_if->board_data->switch_gpio, 0);
 	dev_dbg(rmi4_data->pdev->dev.parent, "%s: Switch I2C mux to AP\n",
 			__func__);
-
-#ifdef CONFIG_WAKE_GESTURES
 	}
-#endif
 	synaptics_rmi4_free_fingers(rmi4_data);
 
 #ifdef CONFIG_WAKE_GESTURES
