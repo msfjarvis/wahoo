@@ -2028,11 +2028,7 @@ static int fts_probe(struct i2c_client *client, const struct i2c_device_id *idp)
 #ifdef FEATURE_FTS_PRODUCTION_CODE
 	fts_production_init(info);
 #endif /* FEATURE_FTS_PRODUCTION_CODE */
-#ifdef CONFIG_WAKE_GESTURES
-	device_init_wakeup(&client->dev, true);
-#else
-	device_init_wakeup(&client->dev, false);
-#endif
+	device_init_wakeup(&client->dev, IS_ENABLED(CONFIG_WAKE_GESTURES));
 	if (device_may_wakeup(&info->client->dev))
 		enable_irq_wake(info->irq);
 	info->lowpower_mode = true;
@@ -2495,7 +2491,6 @@ static int fts_suspend(struct i2c_client *client, pm_message_t mesg)
 		fts_release_all_finger(info);
 		suspended = true;
 		mutex_unlock(&info->device_mutex);
-
 		return 0;
 	}
 #endif
@@ -2525,7 +2520,6 @@ static int fts_resume(struct i2c_client *client)
 		fts_reinit(info);
 		info->reinit_done = true;
 		mutex_unlock(&info->device_mutex);
-
 		goto exit;
 	}
 #endif
@@ -2546,8 +2540,8 @@ static int fts_resume(struct i2c_client *client)
 
 	fts_start_device(info);
 
-exit:
 #ifdef CONFIG_WAKE_GESTURES
+exit:
 	if (wg_changed) {
 		wg_switch = wg_switch_temp;
 		wg_changed = false;
