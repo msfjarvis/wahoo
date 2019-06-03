@@ -1,3 +1,4 @@
+#include <linux/cpu.h>
 #include <linux/mm.h>
 #include <linux/mm_event.h>
 #include <linux/sched.h>
