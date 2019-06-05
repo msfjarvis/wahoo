@@ -926,7 +926,7 @@ static void update_rq_clock_task(struct rq *rq, s64 delta)
 	rq->clock_task += delta;
 
 #if defined(CONFIG_IRQ_TIME_ACCOUNTING) || defined(CONFIG_PARAVIRT_TIME_ACCOUNTING)
-	if ((irq_delta + steal) && sched_feat(NONTASK_CAPACITY))
+	if ((irq_delta + steal) && !!sched_feat(NONTASK_CAPACITY))
 		sched_rt_avg_update(rq, irq_delta + steal);
 #endif
 }
@@ -1184,6 +1184,16 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
 
+static const struct cpumask *adjust_cpumask(struct task_struct *p,
+					    const struct cpumask *req_mask)
+{
+	/* Force all performance-critical kthreads onto the big cluster */
+	if (p->flags & PF_PERF_CRITICAL)
+		return cpu_perf_mask;
+
+	return req_mask;
+}
+
 void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	struct rq *rq = task_rq(p);
@@ -1229,6 +1239,8 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	struct rq *rq;
 	unsigned int dest_cpu;
 	int ret = 0;
+
+	new_mask = adjust_cpumask(p, new_mask);
 
 	rq = task_rq_lock(p, &flags);
 

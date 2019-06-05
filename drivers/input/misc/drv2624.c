@@ -49,6 +49,28 @@
 
 static struct drv2624_data *drv2624_plat_data;
 
+void drv2624_disable_haptics(void)
+{
+	struct drv2624_data *drv2624;
+
+	drv2624 = READ_ONCE(drv2624_plat_data);
+	if (!drv2624)
+		return;
+
+	atomic_inc(&drv2624->disable_refcnt);
+}
+
+void drv2624_enable_haptics(void)
+{
+	struct drv2624_data *drv2624;
+
+	drv2624 = READ_ONCE(drv2624_plat_data);
+	if (!drv2624)
+		return;
+
+	atomic_dec(&drv2624->disable_refcnt);
+}
+
 static bool drv2624_is_volatile_reg(struct device *dev, unsigned int reg);
 
 static int drv2624_reg_read(struct drv2624_data *drv2624, unsigned char reg)
@@ -292,7 +314,8 @@ static void vibrator_enable(struct led_classdev *led_cdev,
 
 	dev_dbg(drv2624->dev, "%s: %d\n", __func__, value);
 
-	if (value == LED_OFF)
+	if (value == LED_OFF || !drv2624->level ||
+	    atomic_read(&drv2624->disable_refcnt) > 0)
 		queue_work(drv2624->drv2624_wq, &drv2624->stop_work);
 	else
 		queue_work(drv2624->drv2624_wq, &drv2624->work);
@@ -1200,6 +1223,40 @@ static ssize_t scale_store(struct device *dev,
 	return count;
 }
 
+static ssize_t level_show(struct device *dev,
+			  struct device_attribute *attr, char *buf)
+{
+	struct drv2624_data *drv2624 = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", drv2624->level);
+}
+
+static ssize_t level_store(struct device *dev,
+			   struct device_attribute *attr, const char *buf,
+			   size_t count)
+{
+	static const u8 level_to_regval[] = { 3, 2, 1, 0 };
+	struct drv2624_data *drv2624 = dev_get_drvdata(dev);
+	int ret;
+	int interval;
+
+	ret = kstrtoint(buf, 10, &interval);
+	if (ret) {
+		pr_err("Invalid input for loop: ret = %d\n", ret);
+		return ret;
+	}
+
+	drv2624->level = clamp(interval, 0, 100);
+	interval = min(drv2624->level / 25, 3);
+	interval = level_to_regval[interval];
+
+	mutex_lock(&drv2624->lock);
+	drv2624_set_bits(drv2624, DRV2624_REG_CONTROL2, SCALE_MASK, interval);
+	mutex_unlock(&drv2624->lock);
+
+	return count;
+}
+
 static ssize_t ctrl_loop_show(struct device *dev,
 			      struct device_attribute *attr, char *buf)
 {
@@ -1493,6 +1550,7 @@ static DEVICE_ATTR(mode, 0660, mode_show, mode_store);
 static DEVICE_ATTR(loop, 0660, loop_show, loop_store);
 static DEVICE_ATTR(interval, 0660, interval_show, interval_store);
 static DEVICE_ATTR(scale, 0660, scale_show, scale_store);
+static DEVICE_ATTR(level, 0660, level_show, level_store);
 static DEVICE_ATTR(ctrl_loop, 0660, ctrl_loop_show, ctrl_loop_store);
 static DEVICE_ATTR(set_sequencer, 0660, NULL, set_sequencer_store);
 static DEVICE_ATTR(od_clamp, 0660, od_clamp_show, od_clamp_store);
@@ -1513,6 +1571,7 @@ static struct attribute *drv2624_fs_attrs[] = {
 	&dev_attr_loop.attr,
 	&dev_attr_interval.attr,
 	&dev_attr_scale.attr,
+	&dev_attr_level.attr,
 	&dev_attr_ctrl_loop.attr,
 	&dev_attr_set_sequencer.attr,
 	&dev_attr_od_clamp.attr,
@@ -1644,12 +1703,11 @@ static int drv2624_i2c_probe(struct i2c_client *client,
 		drv2624_disable_irq(drv2624);
 	}
 
-	drv2624_plat_data = drv2624;
-
 	err = haptics_init(drv2624);
 	if (err)
 		goto drv2624_i2c_probe_err;
 
+	drv2624->level = 100;
 	err = sysfs_create_group(&drv2624->dev->kobj, &drv2624_fs_attr_group);
 	if (err)
 		goto drv2624_i2c_probe_err;
@@ -1658,6 +1716,7 @@ static int drv2624_i2c_probe(struct i2c_client *client,
 				&client->dev, GFP_KERNEL, drv2624,
 				drv2624_firmware_load);
 
+	WRITE_ONCE(drv2624_plat_data, drv2624);
 	dev_info(drv2624->dev, "drv2624 probe succeeded\n");
 
 	return 0;
