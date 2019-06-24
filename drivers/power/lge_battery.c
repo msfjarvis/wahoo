@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/fb.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -34,6 +35,7 @@
 #define LIM_VOLT			4100000
 #define PARALLEL_VOLT			4450000
 #define CHG_CURRENT_MAX			3550000
+#define LCD_ON_CURRENT			1000000
 #define WATCH_DELAY			30000
 #define DEMO_MODE_MAX			35
 #define DEMO_MODE_MIN			30
@@ -51,6 +53,7 @@ enum debug_mask_print {
 
 enum bm_vote_reason {
 	BM_REASON_DEFAULT,
+	BM_REASON_LCD,
 	BM_REASON_STEP,
 	BM_REASON_THERM,
 	BM_REASON_DEMO,
@@ -80,8 +83,10 @@ struct battery_manager {
 	struct power_supply		*usb_psy;
 	struct power_supply		*pl_psy;
 	struct notifier_block		ps_nb;
+	struct notifier_block		fb_nb;
 	struct work_struct		bm_batt_update;
 	struct work_struct		bm_usb_update;
+	struct work_struct		bm_fb_update;
 	struct delayed_work		bm_watch;
 	struct wake_lock		chg_wake_lock;
 	struct mutex			work_lock;
@@ -91,6 +96,7 @@ struct battery_manager {
 	int		chg_present;
 	int		chg_status;
 	int		batt_soc;
+	int		fb_state;
 	int		bm_vote_fcc_reason;
 	int		bm_vote_fcc_value;
 	int		demo_iusb;
@@ -117,6 +123,7 @@ static struct bm_therm_table therm_table[BM_HEALTH_MAX] = {
 
 static int bm_vote_fcc_table[BM_REASON_MAX] = {
 	CHG_CURRENT_MAX,
+	-EINVAL,
 	-EINVAL,
 	-EINVAL,
 	-EINVAL,
@@ -579,10 +586,71 @@ static int bm_ps_register_notifier(struct battery_manager *bm)
 	return rc;
 }
 
+static void bm_fb_update_work(struct work_struct *work)
+{
+	struct battery_manager *bm = container_of(work,
+						struct battery_manager,
+						bm_fb_update);
+	mutex_lock(&bm->work_lock);
+
+	if (!(bm->fb_state & BL_CORE_FBBLANK))
+		bm_vote_fcc(bm, BM_REASON_LCD, LCD_ON_CURRENT);
+	else
+		bm_vote_fcc(bm, BM_REASON_LCD, -EINVAL);
+
+	mutex_unlock(&bm->work_lock);
+}
+
+static int bm_fb_notifier_call(struct notifier_block *nb,
+			       unsigned long ev, void *v)
+{
+	struct fb_event *evdata = v;
+	struct battery_manager *bm = container_of(nb,
+						struct battery_manager,
+						fb_nb);
+	int fb_blank = 0;
+
+	if (ev != FB_EVENT_BLANK)
+		return NOTIFY_OK;
+
+	if (evdata && evdata->data) {
+		fb_blank = *(int *)evdata->data;
+		switch (fb_blank) {
+		case FB_BLANK_UNBLANK:
+			bm->fb_state &= ~BL_CORE_FBBLANK;
+			break;
+		case FB_BLANK_NORMAL:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_HSYNC_SUSPEND:
+		case FB_BLANK_POWERDOWN:
+			bm->fb_state |= BL_CORE_FBBLANK;
+			break;
+		default:
+			pr_bm(ERROR, "not used evdata=%d\n", fb_blank);
+			break;
+		}
+		schedule_work(&bm->bm_fb_update);
+	}
+	return NOTIFY_OK;
+}
+
+static int bm_fb_register_notifier(struct battery_manager *bm)
+{
+	int rc = 0;
+
+	bm->fb_nb.notifier_call = bm_fb_notifier_call;
+	rc = fb_register_client(&bm->fb_nb);
+	if (rc < 0)
+		pr_bm(ERROR, "Couldn't register bm notifier = %d\n", rc);
+
+	return rc;
+}
+
 static int bm_init(struct battery_manager *bm)
 {
 	int i, rc, batt_temp, batt_volt, batt_id = 0;
 
+	bm->fb_state = 0;
 	bm->sc_status = 0;
 	bm->therm_stat = BM_HEALTH_GOOD;
 	bm->bm_vote_fcc_reason = -EINVAL;
@@ -677,6 +745,7 @@ static int bm_init(struct battery_manager *bm)
 	if (rc < 0)
 		pr_bm(ERROR, "Couldn't set ibat current rc=%d\n", rc);
 
+	INIT_WORK(&bm->bm_fb_update, bm_fb_update_work);
 	INIT_WORK(&bm->bm_batt_update, bm_batt_update_work);
 	INIT_WORK(&bm->bm_usb_update, bm_usb_update_work);
 	INIT_DELAYED_WORK(&bm->bm_watch, bm_watch_work);
@@ -721,6 +790,12 @@ static int lge_battery_probe(struct platform_device *pdev)
 	rc = bm_ps_register_notifier(bm);
 	if (rc < 0) {
 		pr_bm(ERROR, "bm_power_register_notifier fail\n");
+		goto error;
+	}
+
+	rc = bm_fb_register_notifier(bm);
+	if (rc < 0) {
+		pr_bm(ERROR, "bm_fb_register_notifier fail!\n");
 		goto error;
 	}
 
