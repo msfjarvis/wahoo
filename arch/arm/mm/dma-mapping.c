@@ -2214,8 +2214,6 @@ static void __arm_iommu_detach_device(struct device *dev)
 		return;
 	}
 
-	if (msm_dma_unmap_all_for_dev(dev))
-		dev_warn(dev, "IOMMU detach with outstanding mappings\n");
 	iommu_domain_get_attr(mapping->domain, DOMAIN_ATTR_FAST, &is_fast);
 	if (is_fast)
 		return fast_smmu_detach_device(dev, mapping);
