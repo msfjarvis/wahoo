@@ -56,6 +56,8 @@ static inline int msm_dma_map_sg(struct device *dev, struct scatterlist *sg,
 void msm_dma_unmap_sg(struct device *dev, struct scatterlist *sgl, int nents,
 		      enum dma_data_direction dir, struct dma_buf *dma_buf);
 
+int msm_dma_unmap_all_for_dev(struct device *dev);
+
 /*
  * Below is private function only to be called by framework (ION) and not by
  * clients.
@@ -92,6 +94,11 @@ static inline void msm_dma_unmap_sg(struct device *dev,
 					enum dma_data_direction dir,
 					struct dma_buf *dma_buf)
 {
+}
+
+static inline int msm_dma_unmap_all_for_dev(struct device *dev)
+{
+	return 0;
 }
 
 static inline void msm_dma_buf_freed(void *buffer) {}
