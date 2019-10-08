@@ -366,6 +366,7 @@ EXPORT_SYMBOL(msm_smp2p_get_remote_mock);
  * @size:    Size of item.
  * @returns: Pointer to mock remote smem item.
  */
+#ifdef CONFIG_MSM_SMP2P_TEST
 void *msm_smp2p_get_remote_mock_smem_item(uint32_t *size)
 {
 	void *ptr = NULL;
@@ -376,6 +377,7 @@ void *msm_smp2p_get_remote_mock_smem_item(uint32_t *size)
 
 	return ptr;
 }
+#endif
 EXPORT_SYMBOL(msm_smp2p_get_remote_mock_smem_item);
 
 /**
@@ -386,6 +388,7 @@ EXPORT_SYMBOL(msm_smp2p_get_remote_mock_smem_item);
  * This function simulates the receiving of interrupt by the mock remote
  * processor in a testing environment.
  */
+#ifdef CONFIG_MSM_SMP2P_TEST
 int smp2p_remote_mock_rx_interrupt(void)
 {
 	remote_mock.rx_interrupt_count++;
@@ -393,6 +396,7 @@ int smp2p_remote_mock_rx_interrupt(void)
 		complete(&remote_mock.cb_completion);
 	return 0;
 }
+#endif
 EXPORT_SYMBOL(smp2p_remote_mock_rx_interrupt);
 
 /**
