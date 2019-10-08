@@ -352,54 +352,6 @@ TRACE_EVENT(mm_page_alloc_extfrag,
 );
 
 
-TRACE_EVENT(ion_heap_shrink,
-
-	TP_PROTO(const char *heap_name,
-		 size_t len,
-		 long total_allocated),
-
-	TP_ARGS(heap_name, len, total_allocated),
-
-	TP_STRUCT__entry(
-		__string(heap_name, heap_name)
-		__field(size_t, len)
-		__field(long, total_allocated)
-	),
-
-	TP_fast_assign(
-		__assign_str(heap_name, heap_name);
-		__entry->len = len;
-		__entry->total_allocated = total_allocated;
-	),
-
-	TP_printk("heap_name=%s, len=%zu, total_allocated=%ld",
-		  __get_str(heap_name), __entry->len, __entry->total_allocated)
-);
-
-TRACE_EVENT(ion_heap_grow,
-
-	TP_PROTO(const char *heap_name,
-		 size_t len,
-		 long total_allocated),
-
-	TP_ARGS(heap_name, len, total_allocated),
-
-	TP_STRUCT__entry(
-		__string(heap_name, heap_name)
-		__field(size_t, len)
-		__field(long, total_allocated)
-	),
-
-	TP_fast_assign(
-		__assign_str(heap_name, heap_name);
-		__entry->len = len;
-		__entry->total_allocated = total_allocated;
-	),
-
-	TP_printk("heap_name=%s, len=%zu, total_allocated=%ld",
-		  __get_str(heap_name), __entry->len, __entry->total_allocated)
-	);
-
 DECLARE_EVENT_CLASS(ion_alloc,
 
 	TP_PROTO(const char *client_name,
@@ -412,7 +364,7 @@ DECLARE_EVENT_CLASS(ion_alloc,
 
 	TP_STRUCT__entry(
 		__array(char,		client_name, 64)
-		__string(heap_name, heap_name)
+		__field(const char *,	heap_name)
 		__field(size_t,		len)
 		__field(unsigned int,	mask)
 		__field(unsigned int,	flags)
@@ -420,7 +372,7 @@ DECLARE_EVENT_CLASS(ion_alloc,
 
 	TP_fast_assign(
 		strlcpy(__entry->client_name, client_name, 64);
-		__assign_str(heap_name, heap_name);
+		__entry->heap_name	= heap_name;
 		__entry->len		= len;
 		__entry->mask		= mask;
 		__entry->flags		= flags;
@@ -428,7 +380,7 @@ DECLARE_EVENT_CLASS(ion_alloc,
 
 	TP_printk("client_name=%s heap_name=%s len=%zu mask=0x%x flags=0x%x",
 		__entry->client_name,
-		__get_str(heap_name),
+		__entry->heap_name,
 		__entry->len,
 		__entry->mask,
 		__entry->flags)
@@ -469,7 +421,7 @@ DECLARE_EVENT_CLASS(ion_alloc_error,
 
 	TP_STRUCT__entry(
 		__field(const char *,	client_name)
-		__string(heap_name, heap_name)
+		__field(const char *,	heap_name)
 		__field(size_t,		len)
 		__field(unsigned int,	mask)
 		__field(unsigned int,	flags)
@@ -478,7 +430,7 @@ DECLARE_EVENT_CLASS(ion_alloc_error,
 
 	TP_fast_assign(
 		__entry->client_name	= client_name;
-		__assign_str(heap_name, heap_name);
+		__entry->heap_name	= heap_name;
 		__entry->len		= len;
 		__entry->mask		= mask;
 		__entry->flags		= flags;
@@ -488,7 +440,7 @@ DECLARE_EVENT_CLASS(ion_alloc_error,
 	TP_printk(
 	"client_name=%s heap_name=%s len=%zu mask=0x%x flags=0x%x error=%ld",
 		__entry->client_name,
-		__get_str(heap_name),
+		__entry->heap_name,
 		__entry->len,
 		__entry->mask,
 		__entry->flags,
@@ -802,21 +754,21 @@ DECLARE_EVENT_CLASS(ion_secure_cma_allocate,
 	TP_ARGS(heap_name, len, align, flags),
 
 	TP_STRUCT__entry(
-		__string(heap_name, heap_name)
+		__field(const char *, heap_name)
 		__field(unsigned long, len)
 		__field(unsigned long, align)
 		__field(unsigned long, flags)
 		),
 
 	TP_fast_assign(
-		__assign_str(heap_name, heap_name);
+		__entry->heap_name = heap_name;
 		__entry->len = len;
 		__entry->align = align;
 		__entry->flags = flags;
 		),
 
 	TP_printk("heap_name=%s len=%lx align=%lx flags=%lx",
-		__get_str(heap_name),
+		__entry->heap_name,
 		__entry->len,
 		__entry->align,
 		__entry->flags)
@@ -850,21 +802,21 @@ DECLARE_EVENT_CLASS(ion_cp_secure_buffer,
 	TP_ARGS(heap_name, len, align, flags),
 
 	TP_STRUCT__entry(
-		__string(heap_name, heap_name)
+		__field(const char *, heap_name)
 		__field(unsigned long, len)
 		__field(unsigned long, align)
 		__field(unsigned long, flags)
 		),
 
 	TP_fast_assign(
-		__assign_str(heap_name, heap_name);
+		__entry->heap_name = heap_name;
 		__entry->len = len;
 		__entry->align = align;
 		__entry->flags = flags;
 		),
 
 	TP_printk("heap_name=%s len=%lx align=%lx flags=%lx",
-		__get_str(heap_name),
+		__entry->heap_name,
 		__entry->len,
 		__entry->align,
 		__entry->flags)
