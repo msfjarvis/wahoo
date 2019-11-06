@@ -82,6 +82,19 @@
  */
 #define MDP_TIME_PERIOD_CALC_FPS_US	1000000
 
+int backlight_min = 0;
+int backlight_max = 255;
+
+module_param(backlight_min, int, 0755);
+module_param(backlight_max, int, 0755);
+
+#define MDSS_BRIGHT_TO_BL_DIM(out, v) do {\
+			out = (12*v*v+1393*v+3060)/4465;\
+			} while (0)
+
+bool backlight_dimmer = false;
+module_param(backlight_dimmer, bool, 0644);
+
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
 
@@ -284,7 +297,18 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		mfd->boot_notification_led = NULL;
 	}
 
-	bl_lvl = mdss_brightness_to_bl(mfd->panel_info, value);
+	if (value != 0) {
+		if (value < backlight_min)
+			value = backlight_min;
+
+		if (value > backlight_max)
+			value = backlight_max;
+	}
+
+	if (backlight_dimmer)
+		MDSS_BRIGHT_TO_BL_DIM(bl_lvl, value);
+	else
+		bl_lvl = mdss_brightness_to_bl(mfd->panel_info, value);
 
 	if (!IS_CALIB_MODE_BL(mfd) && (!mfd->ext_bl_ctrl || !value ||
 							!mfd->bl_level)) {
@@ -3799,7 +3823,7 @@ static int __mdss_fb_display_thread(void *data)
 				mfd->index);
 
 	while (1) {
-		wait_event(mfd->commit_wait_q,
+		wait_event_interruptible(mfd->commit_wait_q,
 				(atomic_read(&mfd->commits_pending) ||
 				 kthread_should_stop()));
 
