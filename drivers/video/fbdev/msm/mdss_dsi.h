@@ -636,6 +636,7 @@ struct mdss_dsi_ctrl_pdata {
 	int disp_err_detect_gpio;
 	struct delayed_work err_int_work;
 	bool rdy_err_detect;
+	bool err_detect_irq_en;
 
 	/* alpm brightness setting */
 	struct dsi_panel_cmds alpm_mode_cmds[ALPM_MODE_MAX];
@@ -646,6 +647,12 @@ struct mdss_dsi_ctrl_pdata {
 	/* rgb calibration */
 	struct dsi_cmd_pos rgb_gain_pos;
 	struct rgb_gain rgb_gain;
+
+	struct notifier_block wake_notif;
+	struct task_struct *wake_thread;
+	struct completion wake_comp;
+	wait_queue_head_t wake_waitq;
+	atomic_t disp_en;
 
 	/* HBM */
 	struct dsi_panel_cmds hbm_on_cmds;
@@ -790,7 +797,14 @@ void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 int mdss_dsi_phy_pll_reset_status(struct mdss_dsi_ctrl_pdata *ctrl);
 
 void check_dsi_ctrl_status_ext(void);
+
+#ifdef CONFIG_DEBUG_FS
 void mdss_dsi_debug_bus_init(struct mdss_dsi_data *sdata);
+#else
+static inline void mdss_dsi_debug_bus_init(struct mdss_dsi_data *sdata)
+{
+}
+#endif
 
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {

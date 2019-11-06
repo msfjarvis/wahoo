@@ -1371,6 +1371,7 @@ static void mdss_mdp_cmd_pingpong_done(void *arg)
 		return;
 	}
 
+	vsync_time = ktime_get();
 	mdss_mdp_ctl_perf_set_transaction_status(ctl,
 		PERF_HW_MDP_STATE, PERF_STATUS_DONE);
 
@@ -3152,6 +3153,11 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	writel_relaxed(clearbit, ctl->mdata->mdp_base +
 		MDSS_REG_HW_INTR2_CLEAR);
 	wmb(); /* flush */
+
+	/* Don't let the CPU servicing the MDP IRQs enter deep idle */
+	if (!cancel_work_sync(&mdata->pm_unset_work))
+		pm_qos_update_request(&mdata->pm_irq_req, 100);
+	WRITE_ONCE(mdata->pm_irq_set, true);
 
 	/* Kickoff */
 	__mdss_mdp_kickoff(ctl, sctl, ctx);
