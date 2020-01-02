@@ -174,7 +174,7 @@ static char *get_client_str(struct votable *votable, int client_id)
 	if (client_id == -EINVAL)
 		return NULL;
 
-	 return votable->client_strs[client_id];
+	return votable->client_strs[client_id];
 }
 
 void lock_votable(struct votable *votable)
