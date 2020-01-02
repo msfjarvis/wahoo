@@ -2320,7 +2320,7 @@ uint32_t cds_mode_specific_connection_count(enum cds_con_mode mode,
 			conc_connection_list[conn_index].in_use) {
 			if (list != NULL)
 				list[count] = conn_index;
-			 count++;
+			count++;
 		}
 	}
 	qdf_mutex_release(&cds_ctx->qdf_conc_list_lock);
