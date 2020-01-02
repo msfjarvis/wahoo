@@ -321,11 +321,11 @@ QDF_STATUS send_vdev_start_cmd_tlv(wmi_unified_t wmi_handle,
 	else
 		ret = wmi_unified_cmd_send(wmi_handle, buf, len,
 					   WMI_VDEV_START_REQUEST_CMDID);
-	 if (ret) {
+	if (ret) {
 		WMI_LOGP("%s: Failed to send vdev start command", __func__);
 		wmi_buf_free(buf);
 		return QDF_STATUS_E_FAILURE;
-	 }
+	}
 
 	return QDF_STATUS_SUCCESS;
 }

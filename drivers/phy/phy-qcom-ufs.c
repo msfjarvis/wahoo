@@ -235,7 +235,7 @@ ufs_qcom_phy_init_clks(struct phy *generic_phy,
 	 * "ref_aux_clk" is optional and only supported by certain
 	 * phy versions, don't abort init if it's not found.
 	 */
-	 __ufs_qcom_phy_clk_get(generic_phy, "ref_aux_clk",
+	__ufs_qcom_phy_clk_get(generic_phy, "ref_aux_clk",
 				   &phy_common->ref_aux_clk, false);
 out:
 	return err;

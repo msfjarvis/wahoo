@@ -777,7 +777,7 @@ static int qpnp_smps_init_mode(struct spm_vreg *vreg)
 			dev_err(&vreg->pdev->dev,
 				"%s: could not read mode register, rc=%d\n",
 				__func__, rc);
-		 vreg->init_mode = (u8)val;
+		vreg->init_mode = (u8)val;
 	}
 
 	vreg->mode = vreg->init_mode;
