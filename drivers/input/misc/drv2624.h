@@ -319,6 +319,8 @@ struct drv2624_data {
 	unsigned char ram_lsb;
 	unsigned char ram_msb;
 	unsigned char lp_trigger_effect;
+	u8 level;
+	atomic_t disable_refcnt;
 };
 
 #define	DRV2624_MAGIC_NUMBER	0x32363234	/* '2624' */

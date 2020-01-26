@@ -40,6 +40,7 @@
 #include <linux/types.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
+#include <linux/i2c/i2c-msm-v2.h>
 #include <linux/input/synaptics_dsx_v2_6.h>
 #include "synaptics_dsx_core.h"
 
@@ -446,7 +447,7 @@ static void synaptics_rmi4_i2c_check_addr(struct synaptics_rmi4_data *rmi4_data,
 static int synaptics_rmi4_i2c_set_page(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr)
 {
-	int retval;
+	int retval = 0;
 	unsigned char retry;
 	unsigned char buf[PAGE_SELECT_LEN];
 	unsigned char page;
@@ -745,6 +746,15 @@ static int synaptics_rmi4_i2c_probe(struct i2c_client *client,
 	}
 
 	return 0;
+}
+
+unsigned int synaptics_rmi4_i2c_irq(void)
+{
+	struct i2c_msm_ctrl *ctrl;
+
+	ctrl = synaptics_dsx_i2c_device->dev.parent->parent->driver_data;
+
+	return ctrl->rsrcs.irq;
 }
 
 static int synaptics_rmi4_i2c_remove(struct i2c_client *client)
