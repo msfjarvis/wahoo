@@ -42,6 +42,7 @@ DEFINE_MUTEX(htc_battery_lock);
 static int charge_stop_level = DEFAULT_CHARGE_STOP_LEVEL;
 static int charge_start_level = DEFAULT_CHARGE_START_LEVEL;
 
+#ifdef HTC_BATT_DEBUG
 #define BATT_LOG(x...) pr_info("[BATT] " x)
 
 #define BATT_DEBUG(x...) do { \
@@ -74,6 +75,12 @@ static int charge_start_level = DEFAULT_CHARGE_START_LEVEL;
 	       _tm.tm_hour, _tm.tm_min, _tm.tm_sec, _ts.tv_nsec); \
 	pr_info("[BATT] :" x); \
 } while (0)
+#else
+#define BATT_LOG(x...) do {} while (0)
+#define BATT_DEBUG(x...) do {} while (0)
+#define BATT_ERR(x...) do {} while (0)
+#define BATT_EMBEDDED(x...) do {} while (0)
+#endif
 
 struct battery_info_reply {
 	u32 batt_vol;
@@ -183,8 +190,10 @@ static int g_chg_dis_reason;
 /* Set true when all battery need file probe done */
 static bool g_htc_battery_probe_done;
 
+#ifdef HTC_BATT_DEBUG
 /* Enable batterydebug log*/
 static bool g_flag_enable_batt_debug_log;
+#endif
 
 static int gs_prev_charging_enabled;
 
@@ -197,7 +206,9 @@ const char *g_chr_src[] = {
 /* accesses htc_batt_timer, needs htc_battery_lock */
 static void batt_set_check_timer(u32 seconds)
 {
+#ifdef HTC_BATT_DEBUG
 	pr_debug("[BATT] %s(%u sec)\n", __func__, seconds);
+#endif
 	mod_timer(&htc_batt_timer.batt_timer,
 		  jiffies + msecs_to_jiffies(seconds * 1000));
 }
