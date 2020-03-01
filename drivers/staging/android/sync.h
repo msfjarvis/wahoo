@@ -154,7 +154,9 @@ struct sync_fence_cb {
 struct sync_fence {
 	struct file		*file;
 	struct kref		kref;
+#ifdef CONFIG_SYNC_DEBUG
 	char			name[64];
+#endif
 #ifdef CONFIG_DEBUG_FS
 	struct list_head	sync_fence_list;
 #endif
@@ -297,6 +299,14 @@ void sync_fence_put(struct sync_fence *fence);
  * get_unused_fd_flags(O_CLOEXEC).
  */
 void sync_fence_install(struct sync_fence *fence, int fd);
+
+/**
+ * sync_fence_signaled() - checks if the fence has already signaled
+ * @fence:		fence to check
+ *
+ * Returns true if @fence has already signaled.
+ */
+bool sync_fence_signaled(struct sync_fence *fence);
 
 /**
  * sync_fence_wait_async() - registers and async wait on the fence
